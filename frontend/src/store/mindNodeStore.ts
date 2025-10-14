@@ -6,6 +6,7 @@ interface MindNode {
   x: number
   y: number
   color?: string
+  connections?: string[]
 }
 
 interface MindNodeStore {
