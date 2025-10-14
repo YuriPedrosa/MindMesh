@@ -28,7 +28,7 @@ public class MindNode {
     private double x;
     private double y;
     private String color;
-    private String type;
+    private NodeType type;
     @CreatedDate
     private LocalDateTime createdAt;
     @LastModifiedDate

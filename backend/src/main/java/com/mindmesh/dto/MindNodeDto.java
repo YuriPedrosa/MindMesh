@@ -1,5 +1,6 @@
 package com.mindmesh.dto;
 
+import com.mindmesh.model.NodeType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -23,8 +24,8 @@ public class MindNodeDto {
     @NotNull(message = "Y position is required")
     private Double y;
     private String color;
-    @NotBlank(message = "Type cannot be blank")
-    private String type;
+    @NotNull(message = "Type is required")
+    private NodeType type;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<Long> connectionIds;
