@@ -89,10 +89,14 @@ mindmesh/
 ```java
 @Node("MindNode")
 public class MindNode {
-    @Id @GeneratedValue private Long id;
+    @Id private Long id;
     private String title;
+    private String description;
     private double x;
     private double y;
+    private String color;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @Relationship(type = "CONNECTED_TO")
     private List<MindNode> connections = new ArrayList<>();
