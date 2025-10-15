@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface MindNodeProps {
   id: string;
@@ -24,25 +24,46 @@ const MindNode: React.FC<MindNodeProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const currentPosition = useRef({ x, y });
+
+  useEffect(() => {
+    currentPosition.current = { x, y };
+    if (nodeRef.current) {
+      nodeRef.current.style.left = `${x}px`;
+      nodeRef.current.style.top = `${y}px`;
+    }
+  }, [x, y]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - x, y: e.clientY - y });
-  };
+    dragStart.current = {
+      x: e.clientX - currentPosition.current.x,
+      y: e.clientY - currentPosition.current.y,
+    };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      const newX = e.clientX - dragStart.x;
-      const newY = e.clientY - dragStart.y;
-      onUpdate(id, { x: newX, y: newY });
-    }
-  };
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStart.current.x;
+      const newY = e.clientY - dragStart.current.y;
+      currentPosition.current = { x: newX, y: newY };
+      if (nodeRef.current) {
+        nodeRef.current.style.left = `${newX}px`;
+        nodeRef.current.style.top = `${newY}px`;
+      }
+    };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+    const handleMouseUp = () => {
+      onUpdate(id, {
+        x: currentPosition.current.x,
+        y: currentPosition.current.y,
+      });
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -63,6 +84,7 @@ const MindNode: React.FC<MindNodeProps> = ({
 
   return (
     <div
+      ref={nodeRef}
       className="absolute cursor-move select-none"
       style={{
         left: x,
@@ -70,9 +92,6 @@ const MindNode: React.FC<MindNodeProps> = ({
         transform: "translate(-50%, -50%)",
       }}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
       onDoubleClick={handleDoubleClick}
       onClick={(e) => e.stopPropagation()}
     >

@@ -1,11 +1,19 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import * as d3 from "d3";
 import MindNode from "./MindNode";
 import { useMindNodeStore } from "../store/mindNodeStore";
+import NewNodeEditor from "./NewNodeEditor";
 
 const MindMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const { nodes, addNode, updateNode, removeNode } = useMindNodeStore();
+  const { nodes, addNode, updateNode, removeNode, fetchNodes } =
+    useMindNodeStore();
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    fetchNodes();
+  }, [fetchNodes]);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -44,14 +52,27 @@ const MindMap: React.FC = () => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const newNode = {
-      id: Date.now().toString(),
-      title: "Novo Nó",
-      x,
-      y,
-      color: "#3B82F6",
-    };
-    addNode(newNode);
+    setClickPosition({ x, y });
+    setIsEditorOpen(true);
+  };
+
+  const handleEditorSave = (config: {
+    title: string;
+    color: string;
+    type: string;
+  }) => {
+    addNode({
+      title: config.title,
+      x: clickPosition.x,
+      y: clickPosition.y,
+      color: config.color,
+      type: config.type,
+    });
+    setIsEditorOpen(false);
+  };
+
+  const handleEditorCancel = () => {
+    setIsEditorOpen(false);
   };
 
   return (
@@ -66,15 +87,23 @@ const MindMap: React.FC = () => {
       {nodes.map((node) => (
         <MindNode
           key={node.id}
-          id={node.id}
+          id={node.id.toString()}
           title={node.title}
           x={node.x}
           y={node.y}
           color={node.color}
-          onUpdate={updateNode}
-          onDelete={removeNode}
+          onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
+          onDelete={(id) => removeNode(parseInt(id))}
         />
       ))}
+      {isEditorOpen && (
+        <NewNodeEditor
+          x={clickPosition.x}
+          y={clickPosition.y}
+          onSave={handleEditorSave}
+          onCancel={handleEditorCancel}
+        />
+      )}
     </div>
   );
 };
