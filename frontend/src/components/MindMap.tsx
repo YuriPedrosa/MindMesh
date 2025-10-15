@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import MindNode from "./MindNode";
 import { useMindNodeStore } from "../store/mindNodeStore";
 import NewNodeEditor from "./NewNodeEditor";
+import type { NodeType } from "../types/nodeTypes";
 
 const MindMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -47,8 +48,6 @@ const MindMap: React.FC = () => {
   }, [nodes]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    console.log("debug", { e });
-
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -59,7 +58,7 @@ const MindMap: React.FC = () => {
   const handleEditorSave = (config: {
     title: string;
     color: string;
-    type: string;
+    type: NodeType;
   }) => {
     addNode({
       title: config.title,
