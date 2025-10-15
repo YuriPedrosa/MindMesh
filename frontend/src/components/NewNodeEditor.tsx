@@ -1,9 +1,15 @@
 import React, { useState } from "react";
+import type { NodeType } from "../types/nodeTypes";
+import {
+  DEFAULT_NODE_TITLE,
+  DEFAULT_NODE_COLOR,
+  DEFAULT_NODE_TYPE,
+} from "../constants/nodeDefaults";
 
 interface NewNodeEditorProps {
   x: number;
   y: number;
-  onSave: (config: { title: string; color: string; type: string }) => void;
+  onSave: (config: { title: string; color: string; type: NodeType }) => void;
   onCancel: () => void;
 }
 
@@ -13,9 +19,9 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [title, setTitle] = useState("Novo Nó");
-  const [color, setColor] = useState("#3B82F6");
-  const [type, setType] = useState("IDEA");
+  const [title, setTitle] = useState(DEFAULT_NODE_TITLE);
+  const [color, setColor] = useState(DEFAULT_NODE_COLOR);
+  const [type, setType] = useState<NodeType>(DEFAULT_NODE_TYPE);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,12 +78,15 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
             />
             <select
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => setType(e.target.value as NodeType)}
               className="px-2 py-1 border border-gray-300 rounded-md text-sm"
             >
               <option value="IDEA">Ideia</option>
               <option value="TASK">Tarefa</option>
               <option value="NOTE">Nota</option>
+              <option value="QUESTION">Pergunta</option>
+              <option value="DECISION">Decisão</option>
+              <option value="REFERENCE">Referência</option>
             </select>
           </div>
           <div className="flex justify-center space-x-2">

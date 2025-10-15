@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import type { NodeType } from '../types/nodeTypes'
+import { DEFAULT_NODE_TYPE } from '../constants/nodeDefaults'
 
 export interface MindNode {
   id: number
@@ -6,7 +8,7 @@ export interface MindNode {
   x: number
   y: number
   color?: string
-  type: string
+  type: NodeType
   connections?: number[]
 }
 
@@ -46,7 +48,7 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
       const response = await fetch(`${API_BASE_URL}/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...node, type: node.type || 'IDEA' }),
+        body: JSON.stringify({ ...node, type: node.type || DEFAULT_NODE_TYPE }),
       })
       if (!response.ok) throw new Error('Failed to add node')
       const newNode = await response.json()
