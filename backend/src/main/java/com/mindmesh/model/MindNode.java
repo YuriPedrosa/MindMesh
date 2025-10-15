@@ -34,6 +34,6 @@ public class MindNode {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    @Relationship(type = "CONNECTED_TO", direction = Relationship.Direction.OUTGOING)
+    @Relationship(type = "CONNECTED_TO")
     private List<MindNode> connections = new ArrayList<>();
 }
