@@ -124,11 +124,12 @@ public class MindNodeService {
             Optional<MindNode> sourceOpt = mindNodeRepository.findById(sourceId);
             Optional<MindNode> targetOpt = mindNodeRepository.findById(targetId);
             if (sourceOpt.isPresent() && targetOpt.isPresent()) {
-                MindNode source = sourceOpt.get();
-                MindNode target = targetOpt.get();
-                if (!source.getConnections().contains(target)) {
-                    source.getConnections().add(target);
-                    mindNodeRepository.save(source);
+                
+                List<MindNode> connectedNodes = mindNodeRepository.findConnectedNodes(sourceId);
+                boolean alreadyConnected = connectedNodes.stream().anyMatch(node -> node.getId().equals(targetId));
+
+                if (!alreadyConnected) {
+                    mindNodeRepository.connectNodes(sourceId, targetId);
                     log.info("Nodes connected: {} -> {}", sourceId, targetId);
                     messagingTemplate.convertAndSend("/topic/graph", getAllNodes());
                     return true;
