@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from "react";
-import * as d3 from "d3";
 import MindNode from "./MindNode";
 import { useMindNodeStore } from "../store/mindNodeStore";
 import NewNodeEditor from "./NewNodeEditor";
@@ -7,45 +6,38 @@ import type { NodeType } from "../types/nodeTypes";
 
 const MindMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const { nodes, addNode, updateNode, removeNode, fetchNodes } =
+  const { nodes, addNode, updateNode, removeNode, fetchNodes, connectNodes } =
     useMindNodeStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [sourceNodeId, setSourceNodeId] = useState<string | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [draggedPositions, setDraggedPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNodes();
   }, [fetchNodes]);
 
-  useEffect(() => {
-    if (!svgRef.current) return;
+  const links = nodes.flatMap(
+    (node) =>
+      node.connectionIds
+        ?.map((targetId) => {
+          const target = nodes.find((n) => n.id === targetId);
+          if (!target) return null;
 
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
+          // Use dragged positions if available, otherwise use node positions
+          const sourcePos = draggedPositions[node.id.toString()] || { x: node.x, y: node.y };
+          const targetPos = draggedPositions[target.id.toString()] || { x: target.x, y: target.y };
 
-    // Draw connections
-    const links = nodes.flatMap(
-      (node) =>
-        node.connections
-          ?.map((targetId) => {
-            const target = nodes.find((n) => n.id === targetId);
-            return target ? { source: node, target } : null;
-          })
-          .filter(Boolean) || []
-    );
-
-    svg
-      .selectAll(".link")
-      .data(links)
-      .enter()
-      .append("line")
-      .attr("class", "link")
-      .attr("stroke", "#999")
-      .attr("stroke-width", 2)
-      .attr("x1", (d) => d!.source.x)
-      .attr("y1", (d) => d!.source.y)
-      .attr("x2", (d) => d!.target.x)
-      .attr("y2", (d) => d!.target.y);
-  }, [nodes]);
+          return {
+            source: { ...node, x: sourcePos.x, y: sourcePos.y },
+            target: { ...target, x: targetPos.x, y: targetPos.y }
+          };
+        })
+        .filter(Boolean) || []
+  );
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -74,27 +66,129 @@ const MindMap: React.FC = () => {
     setIsEditorOpen(false);
   };
 
+  const handleConnectStart = (id: string) => {
+    if (id) {
+      setIsConnecting(true);
+      setSourceNodeId(id);
+    } else {
+      setIsConnecting(false);
+      setSourceNodeId(null);
+    }
+  };
+
+  const handleNodeDrag = (id: string, x: number, y: number) => {
+    setDraggedPositions(prev => ({
+      ...prev,
+      [id]: { x, y }
+    }));
+  };
+
+  const handleConnectEnd = (targetId: string) => {
+    if (sourceNodeId && sourceNodeId !== targetId) {
+      connectNodes(parseInt(sourceNodeId), parseInt(targetId));
+    }
+    setIsConnecting(false);
+    setSourceNodeId(null);
+  };
+
+  const handleNodeHoverStart = (id: string) => {
+    if (isConnecting && id !== sourceNodeId) {
+      setHoveredNodeId(id);
+    }
+  };
+
+  const handleNodeHoverEnd = () => {
+    setHoveredNodeId(null);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isConnecting) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setMousePosition({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
+
+  const sourceNode = sourceNodeId ? nodes.find(n => n.id.toString() === sourceNodeId) : null;
+
   return (
     <div
-      className="relative w-full h-full bg-white overflow-hidden"
+      className="relative w-full h-full bg-transparent overflow-hidden"
       onClick={handleCanvasClick}
+      onMouseMove={handleMouseMove}
     >
       <svg
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
-      />
-      {nodes.map((node) => (
-        <MindNode
-          key={node.id}
-          id={node.id.toString()}
-          title={node.title}
-          x={node.x}
-          y={node.y}
-          color={node.color}
-          onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
-          onDelete={(id) => removeNode(parseInt(id))}
-        />
-      ))}
+      >
+        {/* Draw connections */}
+        {links.map((link, index) => (
+          link && (
+            <line
+              key={index}
+              x1={link.source.x}
+              y1={link.source.y}
+              x2={link.target.x}
+              y2={link.target.y}
+              stroke="#999"
+              strokeWidth={2}
+            />
+          )
+        ))}
+        {/* Draw temporary connection arrow */}
+        {isConnecting && sourceNode && (
+          <line
+            x1={sourceNode.x}
+            y1={sourceNode.y}
+            x2={mousePosition.x}
+            y2={mousePosition.y}
+            stroke="#3B82F6"
+            strokeWidth={3}
+            markerEnd="url(#arrowhead)"
+          />
+        )}
+        <defs>
+          <marker
+            id="arrowhead"
+            markerWidth="10"
+            markerHeight="7"
+            refX="9"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon
+              points="0 0, 10 3.5, 0 7"
+              fill="#3B82F6"
+            />
+          </marker>
+        </defs>
+      </svg>
+      {nodes.map((node) => {
+        const draggedPos = draggedPositions[node.id.toString()];
+        return (
+          <MindNode
+            key={node.id}
+            id={node.id.toString()}
+            title={node.title}
+            x={draggedPos ? draggedPos.x : node.x}
+            y={draggedPos ? draggedPos.y : node.y}
+            color={node.color}
+            type={node.type}
+            onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
+            onDelete={(id) => removeNode(parseInt(id))}
+            onConnectStart={handleConnectStart}
+            onConnectEnd={handleConnectEnd}
+            isConnecting={isConnecting}
+            isSource={sourceNodeId === node.id.toString()}
+            isTarget={hoveredNodeId === node.id.toString()}
+            onDrag={handleNodeDrag}
+            onHoverStart={handleNodeHoverStart}
+            onHoverEnd={handleNodeHoverEnd}
+          />
+        );
+      })}
       {isEditorOpen && (
         <NewNodeEditor
           x={clickPosition.x}

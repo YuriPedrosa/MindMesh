@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { NodeType } from "../types/nodeTypes";
 import {
   DEFAULT_NODE_TITLE,
   DEFAULT_NODE_COLOR,
   DEFAULT_NODE_TYPE,
+  NODE_TYPE_COLORS,
 } from "../constants/nodeDefaults";
 
 interface NewNodeEditorProps {
@@ -22,6 +23,10 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
   const [title, setTitle] = useState(DEFAULT_NODE_TITLE);
   const [color, setColor] = useState(DEFAULT_NODE_COLOR);
   const [type, setType] = useState<NodeType>(DEFAULT_NODE_TYPE);
+
+  useEffect(() => {
+    setColor(NODE_TYPE_COLORS[type]);
+  }, [type]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +60,7 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
       }}
     >
       <div
-        className="bg-white rounded-lg shadow-lg border-2 border-gray-300 p-4 min-w-64"
+        className="bg-card rounded-lg shadow-lg border border-border p-4 min-w-64"
         onClick={(e) => e.stopPropagation()}
       >
         <form onSubmit={handleSubmit}>
@@ -64,7 +69,7 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center font-medium"
+              className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground text-center font-medium"
               autoFocus
               onKeyDown={handleKeyDown}
             />
@@ -74,12 +79,12 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="w-8 h-8 border border-gray-300 rounded cursor-pointer"
+              className="w-8 h-8 border border-input rounded cursor-pointer"
             />
             <select
               value={type}
               onChange={(e) => setType(e.target.value as NodeType)}
-              className="px-2 py-1 border border-gray-300 rounded-md text-sm"
+              className="px-2 py-1 border border-input rounded-md text-sm bg-background text-foreground"
             >
               <option value="IDEA">Ideia</option>
               <option value="TASK">Tarefa</option>
@@ -92,14 +97,14 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
           <div className="flex justify-center space-x-2">
             <button
               type="submit"
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
+              className="px-3 py-1 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm"
             >
               Criar
             </button>
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+              className="px-3 py-1 text-muted-foreground border border-border rounded-md hover:bg-accent text-sm"
             >
               Cancelar
             </button>

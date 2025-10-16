@@ -116,6 +116,44 @@ public class MindNodeService {
     }
 
     @Transactional
+    public Optional<MindNodeDto> patchNode(String id, Map<String, Object> updates) {
+        log.info("Patching node ID: {}", id);
+        try {
+            Long nodeId = Long.valueOf(id);
+
+            // Check if node exists
+            if (!mindNodeRepository.existsById(nodeId)) {
+                log.warn("Node not found for patch: {}", nodeId);
+                return Optional.empty();
+            }
+
+            // Extract update values with null defaults
+            String title = updates.containsKey("title") ? (String) updates.get("title") : null;
+            String description = updates.containsKey("description") ? (String) updates.get("description") : null;
+            Double x = updates.containsKey("x") ? ((Number) updates.get("x")).doubleValue() : null;
+            Double y = updates.containsKey("y") ? ((Number) updates.get("y")).doubleValue() : null;
+            String color = updates.containsKey("color") ? (String) updates.get("color") : null;
+            String type = updates.containsKey("type") ? (String) updates.get("type") : null;
+
+            // Update only the specified fields using Cypher query
+            mindNodeRepository.updateNodeFields(nodeId, title, description, x, y, color, type);
+
+            // Fetch the updated node
+            MindNode updatedNode = mindNodeRepository.findById(nodeId).orElseThrow();
+            MindNodeDto result = toDto(updatedNode);
+            log.info("Node patched: {}", nodeId);
+            messagingTemplate.convertAndSend("/topic/nodes", result);
+            return Optional.of(result);
+        } catch (NumberFormatException e) {
+            log.error("Invalid node ID format for patch: {}", id, e);
+            throw new IllegalArgumentException("Invalid node ID: " + id);
+        } catch (Exception e) {
+            log.error("Error patching node: {}", id, e);
+            throw new RuntimeException("Error patching node: " + id, e);
+        }
+    }
+
+    @Transactional
     public boolean connectNodes(ConnectNodesRequest request) {
         log.info("Connecting nodes: {} -> {}", request.getSourceId(), request.getTargetId());
         try {

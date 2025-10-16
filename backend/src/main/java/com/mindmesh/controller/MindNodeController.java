@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/nodes")
@@ -60,6 +61,19 @@ public class MindNodeController {
     @PutMapping("/{id}")
     public ResponseEntity<MindNodeDto> updateNode(@PathVariable String id, @Valid @RequestBody MindNodeDto dto) {
         return mindNodeService.updateNode(id, dto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Partially update an existing mind node")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully updated node"),
+            @ApiResponse(responseCode = "404", description = "Node not found"),
+            @ApiResponse(responseCode = "400", description = "Invalid input")
+    })
+    @PatchMapping("/{id}")
+    public ResponseEntity<MindNodeDto> patchNode(@PathVariable String id, @RequestBody Map<String, Object> updates) {
+        return mindNodeService.patchNode(id, updates)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
