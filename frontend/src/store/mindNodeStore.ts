@@ -9,7 +9,7 @@ export interface MindNode {
   y: number
   color?: string
   type: NodeType
-  connections?: number[]
+  connectionIds?: number[]
 }
 
 interface MindNodeStore {
@@ -97,13 +97,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
-  connectNodes: async (fromId, toId) => {
+  connectNodes: async (sourceId, targetId) => {
     set({ isLoading: true, error: null })
     try {
       const response = await fetch(`${API_BASE_URL}/nodes/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fromId, toId }),
+        body: JSON.stringify({ sourceId, targetId }),
       })
       if (!response.ok) throw new Error('Failed to connect nodes')
       // Refresh nodes to get updated connections

@@ -25,7 +25,7 @@ const MindMap: React.FC = () => {
     // Draw connections
     const links = nodes.flatMap(
       (node) =>
-        node.connections
+        node.connectionIds
           ?.map((targetId) => {
             const target = nodes.find((n) => n.id === targetId);
             return target ? { source: node, target } : null;
