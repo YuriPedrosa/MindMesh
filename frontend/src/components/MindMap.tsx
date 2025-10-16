@@ -1,9 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
-import MindNode from "./MindNode";
 import { useMindNodeStore } from "../store/mindNodeStore";
-import NewNodeEditor from "./NewNodeEditor";
-import EditNodeEditor from "./EditNodeEditor";
-import NodeContextMenu from "./NodeContextMenu";
+import MindMapCanvas from "./MindMapCanvas";
+import MindMapNodes from "./MindMapNodes";
+import MindMapEditors from "./MindMapEditors";
 import type { NodeType } from "../types/nodeTypes";
 
 const MindMap: React.FC = () => {
@@ -41,7 +40,6 @@ const MindMap: React.FC = () => {
           const target = nodes.find((n) => n.id === targetId);
           if (!target) return null;
 
-          // Use dragged positions if available, otherwise use node positions
           const sourcePos = draggedPositions[node.id.toString()] || { x: node.x, y: node.y };
           const targetPos = draggedPositions[target.id.toString()] || { x: target.x, y: target.y };
 
@@ -54,21 +52,18 @@ const MindMap: React.FC = () => {
   );
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Cancel connection mode when clicking on canvas
     if (isConnecting) {
       setIsConnecting(false);
       setSourceNodeId(null);
       return;
     }
 
-    // If editing a node, close the edit editor instead of opening new node editor
     if (isEditEditorOpen) {
       setIsEditEditorOpen(false);
       setEditNodeData(null);
       return;
     }
 
-    // Close context menu if open
     if (isContextMenuOpen) {
       setIsContextMenuOpen(false);
       return;
@@ -175,7 +170,9 @@ const MindMap: React.FC = () => {
   };
 
   const handleConnectEnd = (targetId: string) => {
-    if (sourceNodeId && sourceNodeId !== targetId) {
+    const sourceNode = nodes.find(n => n.id.toString() === sourceNodeId);
+    const alreadyConnected = sourceNode?.connectionIds?.includes(parseInt(targetId)) || false;
+    if (sourceNodeId && sourceNodeId !== targetId && !alreadyConnected) {
       connectNodes(parseInt(sourceNodeId), parseInt(targetId));
     }
     setIsConnecting(false);
@@ -204,6 +201,8 @@ const MindMap: React.FC = () => {
 
   const sourceNode = sourceNodeId ? nodes.find(n => n.id.toString() === sourceNodeId) : null;
 
+
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       if (isConnecting) {
@@ -221,109 +220,46 @@ const MindMap: React.FC = () => {
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <svg
-        ref={svgRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-      >
-        {/* Draw connections */}
-        {links.map((link, index) => (
-          link && (
-            <line
-              key={index}
-              x1={link.source.x}
-              y1={link.source.y}
-              x2={link.target.x}
-              y2={link.target.y}
-              stroke="#999"
-              strokeWidth={2}
-              markerEnd="url(#connection-arrow)"
-            />
-          )
-        ))}
-        {/* Draw temporary connection arrow */}
-        {isConnecting && sourceNode && (
-          <line
-            x1={sourceNode.x}
-            y1={sourceNode.y}
-            x2={mousePosition.x}
-            y2={mousePosition.y}
-            stroke="#3B82F6"
-            strokeWidth={3}
-            markerEnd="url(#arrowhead)"
-          />
-        )}
-        <defs>
-          <marker
-            id="arrowhead"
-            markerWidth="10"
-            markerHeight="7"
-            refX="9"
-            refY="3.5"
-            orient="auto"
-          >
-            <polygon
-              points="0 0, 10 3.5, 0 7"
-              fill="#3B82F6"
-            />
-          </marker>
-        </defs>
-      </svg>
-      {nodes.map((node) => {
-        const draggedPos = draggedPositions[node.id.toString()];
-        return (
-          <MindNode
-            key={node.id}
-            id={node.id.toString()}
-            title={node.title}
-            x={draggedPos ? draggedPos.x : node.x}
-            y={draggedPos ? draggedPos.y : node.y}
-            color={node.color}
-            type={node.type}
-            onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
-            onEdit={handleEditNode}
-            onDelete={(id) => removeNode(parseInt(id))}
-            onConnectStart={handleConnectStart}
-            onConnectEnd={handleConnectEnd}
-            onContextMenu={handleContextMenu}
-            isConnecting={isConnecting}
-            isSource={sourceNodeId === node.id.toString()}
-            isTarget={hoveredNodeId === node.id.toString()}
-            onDrag={handleNodeDrag}
-            onHoverStart={handleNodeHoverStart}
-            onHoverEnd={handleNodeHoverEnd}
-          />
-        );
-      })}
-      {isEditorOpen && (
-        <NewNodeEditor
-          x={clickPosition.x}
-          y={clickPosition.y}
-          onSave={handleEditorSave}
-          onCancel={handleEditorCancel}
-        />
-      )}
-      {isEditEditorOpen && editNodeData && (
-        <EditNodeEditor
-          id={editNodeData.id}
-          title={editNodeData.title}
-          color={editNodeData.color}
-          type={editNodeData.type}
-          x={editNodeData.x}
-          y={editNodeData.y}
-          onSave={handleEditSave}
-          onCancel={handleEditCancel}
-        />
-      )}
-      {isContextMenuOpen && (
-        <NodeContextMenu
-          x={contextMenuPosition.x}
-          y={contextMenuPosition.y}
-          onEdit={handleContextMenuEdit}
-          onDelete={handleContextMenuDelete}
-          onConnect={handleContextMenuConnect}
-          onClose={handleContextMenuClose}
-        />
-      )}
+      <MindMapCanvas
+        svgRef={svgRef}
+        links={links}
+        isConnecting={isConnecting}
+        sourceNode={sourceNode}
+        mousePosition={mousePosition}
+      />
+      <MindMapNodes
+        nodes={nodes}
+        draggedPositions={draggedPositions}
+        isConnecting={isConnecting}
+        sourceNodeId={sourceNodeId}
+        hoveredNodeId={hoveredNodeId}
+        sourceNode={sourceNode}
+        onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
+        onEdit={handleEditNode}
+        onDelete={(id) => removeNode(parseInt(id))}
+        onConnectStart={handleConnectStart}
+        onConnectEnd={handleConnectEnd}
+        onContextMenu={handleContextMenu}
+        onHoverStart={handleNodeHoverStart}
+        onHoverEnd={handleNodeHoverEnd}
+        onDrag={handleNodeDrag}
+      />
+      <MindMapEditors
+        isEditorOpen={isEditorOpen}
+        clickPosition={clickPosition}
+        onEditorSave={handleEditorSave}
+        onEditorCancel={handleEditorCancel}
+        isEditEditorOpen={isEditEditorOpen}
+        editNodeData={editNodeData}
+        onEditSave={handleEditSave}
+        onEditCancel={handleEditCancel}
+        isContextMenuOpen={isContextMenuOpen}
+        contextMenuPosition={contextMenuPosition}
+        onContextMenuEdit={handleContextMenuEdit}
+        onContextMenuDelete={handleContextMenuDelete}
+        onContextMenuConnect={handleContextMenuConnect}
+        onContextMenuClose={handleContextMenuClose}
+      />
     </div>
   );
 };

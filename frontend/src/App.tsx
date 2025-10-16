@@ -9,8 +9,7 @@ const App: React.FC = () => {
           <div className="flex justify-between items-center py-4">
             <h1 className="text-2xl font-bold text-foreground">MindMesh</h1>
             <div className="text-sm text-muted-foreground">
-              Clique no canvas para adicionar nós • Arraste para mover • Duplo
-              clique para editar
+              Clique no canvas para adicionar nós • Arraste para mover
             </div>
           </div>
         </div>

@@ -105,7 +105,6 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
         body: JSON.stringify({ sourceId, targetId }),
       })
       if (!response.ok) throw new Error('Failed to connect nodes')
-      // Refresh nodes to get updated connections
       await get().fetchNodes()
       set({ isLoading: false })
     } catch (error) {

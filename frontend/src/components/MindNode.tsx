@@ -1,15 +1,15 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import type { NodeType } from "../types/nodeTypes";
 import { NODE_TYPE_COLORS, NODE_TYPE_ICONS } from "../constants/nodeDefaults";
 import { isColorDark } from "../utils/colorUtils";
+import { useDrag } from "../hooks/useDrag";
 
-interface MindNodeProps {
-  id: string;
-  title: string;
+interface Position {
   x: number;
   y: number;
-  color?: string;
-  type: NodeType;
+}
+
+interface Callbacks {
   onUpdate: (
     id: string,
     updates: Partial<{ title: string; x: number; y: number; color: string }>
@@ -19,113 +19,66 @@ interface MindNodeProps {
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, nodeId: string) => void;
+  onHoverStart: (id: string) => void;
+  onHoverEnd: () => void;
+}
+
+interface ConnectionState {
   isConnecting: boolean;
   isSource: boolean;
   isTarget: boolean;
+  isAlreadyConnected: boolean;
+}
+
+interface MindNodeProps {
+  id: string;
+  title: string;
+  position: Position;
+  color?: string;
+  type: NodeType;
+  callbacks: Callbacks;
+  connectionState: ConnectionState;
   onDrag?: (id: string, x: number, y: number) => void;
-  onHoverStart: (id: string) => void;
-  onHoverEnd: () => void;
 }
 
 const MindNode: React.FC<MindNodeProps> = ({
   id,
   title,
-  x,
-  y,
+  position,
   color,
   type,
-  onUpdate,
-  onEdit,
-  onDelete,
-  onConnectStart,
-  onConnectEnd,
-  onContextMenu,
-  isConnecting,
-  isSource,
-  isTarget,
+  callbacks,
+  connectionState,
   onDrag,
-  onHoverStart,
-  onHoverEnd,
 }) => {
   const nodeColor = color || NODE_TYPE_COLORS[type];
   const isDark = isColorDark(nodeColor);
-  const nodeRef = useRef<HTMLDivElement>(null);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const currentPosition = useRef({ x, y });
-  const isDragging = useRef(false);
 
-  useEffect(() => {
-    currentPosition.current = { x, y };
-    if (nodeRef.current) {
-      nodeRef.current.style.left = `${x}px`;
-      nodeRef.current.style.top = `${y}px`;
-    }
-  }, [x, y]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    isDragging.current = false;
-    dragStart.current = {
-      x: e.clientX - currentPosition.current.x,
-      y: e.clientY - currentPosition.current.y,
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      isDragging.current = true;
-      const newX = e.clientX - dragStart.current.x;
-      const newY = e.clientY - dragStart.current.y;
-      currentPosition.current = { x: newX, y: newY };
-      if (nodeRef.current) {
-        nodeRef.current.style.left = `${newX}px`;
-        nodeRef.current.style.top = `${newY}px`;
-      }
-      // Call onDrag callback if provided
+  const { nodeRef, handleMouseDown, isDragging } = useDrag({
+    initialX: position.x,
+    initialY: position.y,
+    onDrag: (x, y) => {
       if (onDrag) {
-        onDrag(id, newX, newY);
+        onDrag(id, x, y);
       }
-    };
-
-    const handleMouseUp = () => {
-      if (isDragging.current) {
-        // Update the node position through onUpdate
-        onUpdate(id, {
-          x: currentPosition.current.x,
-          y: currentPosition.current.y,
-        });
-        // Clear dragged position to prevent flickering
-        if (onDrag) {
-          onDrag(id, currentPosition.current.x, currentPosition.current.y);
-        }
-      }
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  };
+    },
+    onDragEnd: (x, y) => {
+      callbacks.onUpdate(id, { x, y });
+    },
+  });
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Only handle connection clicks if not dragging
-    if (!isDragging.current) {
-      if (isConnecting) {
-        // When connecting, always handle as connection click
-        if (isSource) {
-          // Cancel connection
-          onConnectStart("");
+    if (!isDragging) {
+      if (connectionState.isConnecting) {
+        if (connectionState.isSource) {
+          callbacks.onConnectStart("");
         } else {
-          // Connect to this node
-          onConnectEnd(id);
+          callbacks.onConnectEnd(id);
         }
       } else {
-        // When not connecting, Shift+click for connections, regular click for editing
         if (e.shiftKey) {
-          // Start connection
-          onConnectStart(id);
-        } else {
-          // Regular click for editing
-          onEdit(id);
+          callbacks.onConnectStart(id);
         }
       }
     }
@@ -135,22 +88,25 @@ const MindNode: React.FC<MindNodeProps> = ({
     <div
       ref={nodeRef}
       className={`absolute cursor-move select-none group transition-opacity duration-200 ${
-        isConnecting && !isSource && !isTarget ? "opacity-50" : "opacity-100"
+        connectionState.isConnecting && !connectionState.isSource && !connectionState.isTarget ? "opacity-50" : "opacity-100"
       }`}
       style={{
-        left: x,
-        top: y,
+        left: position.x,
+        top: position.y,
         transform: "translate(-50%, -50%)",
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
-      onContextMenu={(e) => onContextMenu(e, id)}
-      onMouseEnter={() => onHoverStart(id)}
-      onMouseLeave={onHoverEnd}
+      onContextMenu={(e) => callbacks.onContextMenu(e, id)}
+      onMouseEnter={() => callbacks.onHoverStart(id)}
+      onMouseLeave={callbacks.onHoverEnd}
+      title={connectionState.isAlreadyConnected ? "Conexão proibida" : connectionState.isConnecting && !connectionState.isSource ? "Clique para conectar" : undefined}
     >
       <div
         className={`relative flex rounded-xl shadow-2xl border-2 border-white/20 bg-card/90 backdrop-blur-md transition-all duration-200 hover:shadow-3xl hover:scale-105 ${
-          isTarget ? "ring-4 ring-blue-500 ring-opacity-75" : ""
+          connectionState.isTarget ? "ring-4 ring-blue-500 ring-opacity-75" : ""
+        } ${
+          connectionState.isAlreadyConnected ? "ring-6 ring-red-500 ring-opacity-100 cursor-not-allowed" : ""
         }`}
         style={{ backgroundColor: nodeColor, boxShadow: `0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)` }}
       >
@@ -163,7 +119,7 @@ const MindNode: React.FC<MindNodeProps> = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onDelete(id);
+            callbacks.onDelete(id);
           }}
           className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-destructive/80 flex items-center justify-center text-sm font-bold shadow-md"
         >
