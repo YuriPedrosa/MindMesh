@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import type { NodeType } from "../types/nodeTypes";
 import { NODE_TYPE_COLORS, NODE_TYPE_ICONS } from "../constants/nodeDefaults";
 import { isColorDark } from "../utils/colorUtils";
@@ -14,9 +14,11 @@ interface MindNodeProps {
     id: string,
     updates: Partial<{ title: string; x: number; y: number; color: string }>
   ) => void;
+  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
+  onContextMenu: (e: React.MouseEvent, nodeId: string) => void;
   isConnecting: boolean;
   isSource: boolean;
   isTarget: boolean;
@@ -33,9 +35,11 @@ const MindNode: React.FC<MindNodeProps> = ({
   color,
   type,
   onUpdate,
+  onEdit,
   onDelete,
   onConnectStart,
   onConnectEnd,
+  onContextMenu,
   isConnecting,
   isSource,
   isTarget,
@@ -45,8 +49,6 @@ const MindNode: React.FC<MindNodeProps> = ({
 }) => {
   const nodeColor = color || NODE_TYPE_COLORS[type];
   const isDark = isColorDark(nodeColor);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(title);
   const nodeRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const currentPosition = useRef({ x, y });
@@ -103,27 +105,12 @@ const MindNode: React.FC<MindNodeProps> = ({
     document.addEventListener("mouseup", handleMouseUp);
   };
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsEditing(true);
-  };
-
-  const handleSave = () => {
-    onUpdate(id, { title: editTitle });
-    setIsEditing(false);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSave();
-    }
-  };
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Only handle connection clicks if not dragging
     if (!isDragging.current) {
       if (isConnecting) {
+        // When connecting, always handle as connection click
         if (isSource) {
           // Cancel connection
           onConnectStart("");
@@ -132,8 +119,14 @@ const MindNode: React.FC<MindNodeProps> = ({
           onConnectEnd(id);
         }
       } else {
-        // Start connection
-        onConnectStart(id);
+        // When not connecting, Shift+click for connections, regular click for editing
+        if (e.shiftKey) {
+          // Start connection
+          onConnectStart(id);
+        } else {
+          // Regular click for editing
+          onEdit(id);
+        }
       }
     }
   };
@@ -150,8 +143,8 @@ const MindNode: React.FC<MindNodeProps> = ({
         transform: "translate(-50%, -50%)",
       }}
       onMouseDown={handleMouseDown}
-      onDoubleClick={handleDoubleClick}
       onClick={handleClick}
+      onContextMenu={(e) => onContextMenu(e, id)}
       onMouseEnter={() => onHoverStart(id)}
       onMouseLeave={onHoverEnd}
     >
@@ -165,19 +158,7 @@ const MindNode: React.FC<MindNodeProps> = ({
           <span className="text-xl drop-shadow-lg filter" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{NODE_TYPE_ICONS[type]}</span>
         </div>
         <div className="flex-1 px-4 py-3">
-          {isEditing ? (
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleSave}
-              onKeyPress={handleKeyPress}
-              className="bg-transparent outline-none text-foreground placeholder-muted-foreground font-medium w-full"
-              autoFocus
-            />
-          ) : (
-            <span className={`font-medium select-none ${isDark ? 'text-white' : 'text-black'}`}>{title}</span>
-          )}
+          <span className={`font-medium select-none ${isDark ? 'text-white' : 'text-black'}`}>{title}</span>
         </div>
         <button
           onClick={(e) => {
