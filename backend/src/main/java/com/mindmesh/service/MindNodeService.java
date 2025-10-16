@@ -23,6 +23,19 @@ public class MindNodeService {
     private final MindNodeRepository mindNodeRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private Long parseId(String id) {
+        try {
+            return Long.valueOf(id);
+        } catch (NumberFormatException e) {
+            log.error("Invalid node ID format: {}", id, e);
+            throw new IllegalArgumentException("Invalid node ID: " + id);
+        }
+    }
+
+    private boolean nodeExists(Long id) {
+        return mindNodeRepository.existsById(id);
+    }
+
     public List<MindNodeDto> getAllNodes() {
         log.debug("Retrieving all mind nodes");
         List<MindNodeDto> nodes = mindNodeRepository.findAll().stream()
@@ -34,19 +47,14 @@ public class MindNodeService {
 
     public Optional<MindNodeDto> getNodeById(String id) {
         log.debug("Retrieving node by ID: {}", id);
-        try {
-            Long nodeId = Long.valueOf(id);
-            Optional<MindNodeDto> node = mindNodeRepository.findById(nodeId).map(this::toDto);
-            if (node.isPresent()) {
-                log.debug("Node found: {}", nodeId);
-            } else {
-                log.warn("Node not found: {}", nodeId);
-            }
-            return node;
-        } catch (NumberFormatException e) {
-            log.error("Invalid node ID format: {}", id, e);
-            throw new IllegalArgumentException("Invalid node ID: " + id);
+        Long nodeId = parseId(id);
+        Optional<MindNodeDto> node = mindNodeRepository.findById(nodeId).map(this::toDto);
+        if (node.isPresent()) {
+            log.debug("Node found: {}", nodeId);
+        } else {
+            log.warn("Node not found: {}", nodeId);
         }
+        return node;
     }
 
     @Transactional
@@ -69,49 +77,39 @@ public class MindNodeService {
     @Transactional
     public Optional<MindNodeDto> updateNode(String id, MindNodeDto dto) {
         log.info("Updating node ID: {}", id);
-        try {
-            Long nodeId = Long.valueOf(id);
-            Optional<MindNode> existing = mindNodeRepository.findById(nodeId);
-            if (existing.isPresent()) {
-                MindNode node = existing.get();
-                node.setTitle(dto.getTitle());
-                node.setDescription(dto.getDescription());
-                node.setX(dto.getX());
-                node.setY(dto.getY());
-                node.setColor(dto.getColor());
-                node.setType(dto.getType());
-                MindNode saved = mindNodeRepository.save(node);
-                MindNodeDto result = toDto(saved);
-                log.info("Node updated: {}", nodeId);
-                messagingTemplate.convertAndSend("/topic/nodes", result);
-                return Optional.of(result);
-            } else {
-                log.warn("Node not found for update: {}", nodeId);
-                return Optional.empty();
-            }
-        } catch (NumberFormatException e) {
-            log.error("Invalid node ID format for update: {}", id, e);
-            throw new IllegalArgumentException("Invalid node ID: " + id);
+        Long nodeId = parseId(id);
+        Optional<MindNode> existing = mindNodeRepository.findById(nodeId);
+        if (existing.isPresent()) {
+            MindNode node = existing.get();
+            node.setTitle(dto.getTitle());
+            node.setDescription(dto.getDescription());
+            node.setX(dto.getX());
+            node.setY(dto.getY());
+            node.setColor(dto.getColor());
+            node.setType(dto.getType());
+            MindNode saved = mindNodeRepository.save(node);
+            MindNodeDto result = toDto(saved);
+            log.info("Node updated: {}", nodeId);
+            messagingTemplate.convertAndSend("/topic/nodes", result);
+            return Optional.of(result);
+        } else {
+            log.warn("Node not found for update: {}", nodeId);
+            return Optional.empty();
         }
     }
 
     @Transactional
     public boolean deleteNode(String id) {
         log.info("Deleting node ID: {}", id);
-        try {
-            Long nodeId = Long.valueOf(id);
-            if (mindNodeRepository.existsById(nodeId)) {
-                mindNodeRepository.deleteById(nodeId);
-                log.info("Node deleted: {}", nodeId);
-                messagingTemplate.convertAndSend("/topic/nodes", Map.of("deleted", id));
-                return true;
-            } else {
-                log.warn("Node not found for deletion: {}", nodeId);
-                return false;
-            }
-        } catch (NumberFormatException e) {
-            log.error("Invalid node ID format for deletion: {}", id);
-            throw new IllegalArgumentException("Invalid node ID: " + id);
+        Long nodeId = parseId(id);
+        if (nodeExists(nodeId)) {
+            mindNodeRepository.deleteById(nodeId);
+            log.info("Node deleted: {}", nodeId);
+            messagingTemplate.convertAndSend("/topic/nodes", Map.of("deleted", id));
+            return true;
+        } else {
+            log.warn("Node not found for deletion: {}", nodeId);
+            return false;
         }
     }
 
@@ -119,10 +117,10 @@ public class MindNodeService {
     public Optional<MindNodeDto> patchNode(String id, Map<String, Object> updates) {
         log.info("Patching node ID: {}", id);
         try {
-            Long nodeId = Long.valueOf(id);
+            Long nodeId = parseId(id);
 
             // Check if node exists
-            if (!mindNodeRepository.existsById(nodeId)) {
+            if (!nodeExists(nodeId)) {
                 log.warn("Node not found for patch: {}", nodeId);
                 return Optional.empty();
             }
@@ -155,35 +153,33 @@ public class MindNodeService {
 
     @Transactional
     public boolean connectNodes(ConnectNodesRequest request) {
-        log.info("Connecting nodes: {} -> {}", request.getSourceId(), request.getTargetId());
         try {
-            Long sourceId = Long.valueOf(request.getSourceId());
-            Long targetId = Long.valueOf(request.getTargetId());
-            Optional<MindNode> sourceOpt = mindNodeRepository.findById(sourceId);
-            Optional<MindNode> targetOpt = mindNodeRepository.findById(targetId);
-            if (sourceOpt.isPresent() && targetOpt.isPresent()) {
-                
-                List<MindNode> connectedNodes = mindNodeRepository.findConnectedNodes(sourceId);
-                boolean alreadyConnected = connectedNodes.stream().anyMatch(node -> node.getId().equals(targetId));
+        log.info("Connecting nodes: {} -> {}", request.getSourceId(), request.getTargetId());
+        Long sourceId = parseId(request.getSourceId());
+        Long targetId = parseId(request.getTargetId());
 
-                if (!alreadyConnected) {
-                    mindNodeRepository.connectNodes(sourceId, targetId);
-                    log.info("Nodes connected: {} -> {}", sourceId, targetId);
-                    messagingTemplate.convertAndSend("/topic/graph", getAllNodes());
-                    return true;
-                } else {
-                    log.warn("Nodes already connected: {} -> {}", sourceId, targetId);
-                    return false;
-                }
+        Optional<MindNode> sourceOpt = mindNodeRepository.findById(sourceId);
+        Optional<MindNode> targetOpt = mindNodeRepository.findById(targetId);
+        if (sourceOpt.isPresent() && targetOpt.isPresent()) {
+            List<MindNode> connectedNodes = mindNodeRepository.findConnectedNodes(sourceId);
+            boolean alreadyConnected = connectedNodes.stream().anyMatch(node -> node.getId().equals(targetId));
+
+            if (!alreadyConnected) {
+                mindNodeRepository.connectNodes(sourceId, targetId);
+                log.info("Nodes connected: {} -> {}", sourceId, targetId);
+                messagingTemplate.convertAndSend("/topic/graph", getAllNodes());
+                return true;
             } else {
-                log.warn("One or both nodes not found for connection: {} -> {}", sourceId, targetId);
+                log.warn("Nodes already connected: {} -> {}", sourceId, targetId);
                 return false;
             }
-        } catch (NumberFormatException e) {
-            log.error("Invalid node ID format for connection: {} -> {}", request.getSourceId(), request.getTargetId(),
-                    e);
-            throw new IllegalArgumentException(
-                    "Invalid node IDs: " + request.getSourceId() + ", " + request.getTargetId());
+        } else {
+            log.warn("One or both nodes not found for connection: {} -> {}", sourceId, targetId);
+            return false;
+        }
+        } catch (Exception e) {
+            log.error("Error connecting nodes: {} -> {}", request.getSourceId(), request.getTargetId(), e);
+            throw new RuntimeException("Error connecting nodes: " + request.getSourceId() + " -> " + request.getTargetId(), e);
         }
     }
 
