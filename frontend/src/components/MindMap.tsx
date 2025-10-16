@@ -5,29 +5,47 @@ import MindMapNodes from "./MindMapNodes";
 import MindMapEditors from "./MindMapEditors";
 import type { NodeType } from "../types/nodeTypes";
 
-const MindMap: React.FC = () => {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const { nodes, addNode, updateNode, removeNode, fetchNodes, connectNodes } =
-    useMindNodeStore();
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [clickPosition, setClickPosition] = useState({ x: 0, y: 0 });
-  const [isEditEditorOpen, setIsEditEditorOpen] = useState(false);
-  const [editNodeData, setEditNodeData] = useState<{
+interface MindMapState {
+  isEditorOpen: boolean;
+  clickPosition: { x: number; y: number };
+  isEditEditorOpen: boolean;
+  editNodeData: {
     id: string;
     title: string;
     color: string;
     type: NodeType;
     x: number;
     y: number;
-  } | null>(null);
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [contextMenuNodeId, setContextMenuNodeId] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [sourceNodeId, setSourceNodeId] = useState<string | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [draggedPositions, setDraggedPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  } | null;
+  isContextMenuOpen: boolean;
+  contextMenuPosition: { x: number; y: number };
+  contextMenuNodeId: string | null;
+  isConnecting: boolean;
+  sourceNodeId: string | null;
+  mousePosition: { x: number; y: number };
+  draggedPositions: Record<string, { x: number; y: number }>;
+  hoveredNodeId: string | null;
+}
+
+const MindMap: React.FC = () => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const { nodes, addNode, updateNode, removeNode, fetchNodes, connectNodes, isInitialLoading } =
+    useMindNodeStore();
+
+  const [state, setState] = useState<MindMapState>({
+    isEditorOpen: false,
+    clickPosition: { x: 0, y: 0 },
+    isEditEditorOpen: false,
+    editNodeData: null,
+    isContextMenuOpen: false,
+    contextMenuPosition: { x: 0, y: 0 },
+    contextMenuNodeId: null,
+    isConnecting: false,
+    sourceNodeId: null,
+    mousePosition: { x: 0, y: 0 },
+    draggedPositions: {},
+    hoveredNodeId: null,
+  });
 
   useEffect(() => {
     fetchNodes();
@@ -40,8 +58,8 @@ const MindMap: React.FC = () => {
           const target = nodes.find((n) => n.id === targetId);
           if (!target) return null;
 
-          const sourcePos = draggedPositions[node.id.toString()] || { x: node.x, y: node.y };
-          const targetPos = draggedPositions[target.id.toString()] || { x: target.x, y: target.y };
+          const sourcePos = state.draggedPositions[node.id.toString()] || { x: node.x, y: node.y };
+          const targetPos = state.draggedPositions[target.id.toString()] || { x: target.x, y: target.y };
 
           return {
             source: { ...node, x: sourcePos.x, y: sourcePos.y },
@@ -52,28 +70,25 @@ const MindMap: React.FC = () => {
   );
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isConnecting) {
-      setIsConnecting(false);
-      setSourceNodeId(null);
+    if (state.isConnecting) {
+      setState(prev => ({ ...prev, isConnecting: false, sourceNodeId: null }));
       return;
     }
 
-    if (isEditEditorOpen) {
-      setIsEditEditorOpen(false);
-      setEditNodeData(null);
+    if (state.isEditEditorOpen) {
+      setState(prev => ({ ...prev, isEditEditorOpen: false, editNodeData: null }));
       return;
     }
 
-    if (isContextMenuOpen) {
-      setIsContextMenuOpen(false);
+    if (state.isContextMenuOpen) {
+      setState(prev => ({ ...prev, isContextMenuOpen: false }));
       return;
     }
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    setClickPosition({ x, y });
-    setIsEditorOpen(true);
+    setState(prev => ({ ...prev, clickPosition: { x, y }, isEditorOpen: true }));
   };
 
   const handleEditorSave = (config: {
@@ -83,131 +98,134 @@ const MindMap: React.FC = () => {
   }) => {
     addNode({
       title: config.title,
-      x: clickPosition.x,
-      y: clickPosition.y,
+      x: state.clickPosition.x,
+      y: state.clickPosition.y,
       color: config.color,
       type: config.type,
     });
-    setIsEditorOpen(false);
+    setState(prev => ({ ...prev, isEditorOpen: false }));
   };
 
   const handleEditorCancel = () => {
-    setIsEditorOpen(false);
+    setState(prev => ({ ...prev, isEditorOpen: false }));
   };
 
   const handleEditNode = (id: string) => {
     const node = nodes.find(n => n.id.toString() === id);
     if (node) {
-      const draggedPos = draggedPositions[node.id.toString()];
-      setEditNodeData({
-        id: node.id.toString(),
-        title: node.title,
-        color: node.color || "",
-        type: node.type,
-        x: draggedPos ? draggedPos.x : node.x,
-        y: draggedPos ? draggedPos.y : node.y,
-      });
-      setIsEditEditorOpen(true);
+      const draggedPos = state.draggedPositions[node.id.toString()];
+      setState(prev => ({
+        ...prev,
+        editNodeData: {
+          id: node.id.toString(),
+          title: node.title,
+          color: node.color || "",
+          type: node.type,
+          x: draggedPos ? draggedPos.x : node.x,
+          y: draggedPos ? draggedPos.y : node.y,
+        },
+        isEditEditorOpen: true,
+      }));
     }
   };
 
   const handleEditSave = (id: string, config: { title: string; color: string; type: NodeType }) => {
     updateNode(parseInt(id), config);
-    setIsEditEditorOpen(false);
-    setEditNodeData(null);
+    setState(prev => ({ ...prev, isEditEditorOpen: false, editNodeData: null }));
   };
 
   const handleEditCancel = () => {
-    setIsEditEditorOpen(false);
-    setEditNodeData(null);
+    setState(prev => ({ ...prev, isEditEditorOpen: false, editNodeData: null }));
   };
 
   const handleContextMenu = (e: React.MouseEvent, nodeId: string) => {
     e.preventDefault();
-    setContextMenuPosition({ x: e.clientX, y: e.clientY });
-    setContextMenuNodeId(nodeId);
-    setIsContextMenuOpen(true);
+    setState(prev => ({
+      ...prev,
+      contextMenuPosition: { x: e.clientX, y: e.clientY },
+      contextMenuNodeId: nodeId,
+      isContextMenuOpen: true,
+    }));
   };
 
   const handleContextMenuEdit = () => {
-    if (contextMenuNodeId) {
-      handleEditNode(contextMenuNodeId);
+    if (state.contextMenuNodeId) {
+      handleEditNode(state.contextMenuNodeId);
     }
   };
 
   const handleContextMenuDelete = () => {
-    if (contextMenuNodeId) {
-      removeNode(parseInt(contextMenuNodeId));
+    if (state.contextMenuNodeId) {
+      removeNode(parseInt(state.contextMenuNodeId));
     }
   };
 
   const handleContextMenuConnect = () => {
-    if (contextMenuNodeId) {
-      handleConnectStart(contextMenuNodeId);
+    if (state.contextMenuNodeId) {
+      handleConnectStart(state.contextMenuNodeId);
     }
   };
 
   const handleContextMenuClose = () => {
-    setIsContextMenuOpen(false);
-    setContextMenuNodeId(null);
+    setState(prev => ({ ...prev, isContextMenuOpen: false, contextMenuNodeId: null }));
   };
 
   const handleConnectStart = (id: string) => {
     if (id) {
-      setIsConnecting(true);
-      setSourceNodeId(id);
+      setState(prev => ({ ...prev, isConnecting: true, sourceNodeId: id }));
     } else {
-      setIsConnecting(false);
-      setSourceNodeId(null);
+      setState(prev => ({ ...prev, isConnecting: false, sourceNodeId: null }));
     }
   };
 
   const handleNodeDrag = (id: string, x: number, y: number) => {
-    setDraggedPositions(prev => ({
+    setState(prev => ({
       ...prev,
-      [id]: { x, y }
+      draggedPositions: {
+        ...prev.draggedPositions,
+        [id]: { x, y }
+      }
     }));
   };
 
   const handleConnectEnd = (targetId: string) => {
-    const sourceNode = nodes.find(n => n.id.toString() === sourceNodeId);
+    const sourceNode = nodes.find(n => n.id.toString() === state.sourceNodeId);
     const alreadyConnected = sourceNode?.connectionIds?.includes(parseInt(targetId)) || false;
-    if (sourceNodeId && sourceNodeId !== targetId && !alreadyConnected) {
-      connectNodes(parseInt(sourceNodeId), parseInt(targetId));
+    if (state.sourceNodeId && state.sourceNodeId !== targetId && !alreadyConnected) {
+      connectNodes(parseInt(state.sourceNodeId), parseInt(targetId));
     }
-    setIsConnecting(false);
-    setSourceNodeId(null);
+    setState(prev => ({ ...prev, isConnecting: false, sourceNodeId: null }));
   };
 
   const handleNodeHoverStart = (id: string) => {
-    if (isConnecting && id !== sourceNodeId) {
-      setHoveredNodeId(id);
+    if (state.isConnecting && id !== state.sourceNodeId) {
+      setState(prev => ({ ...prev, hoveredNodeId: id }));
     }
   };
 
   const handleNodeHoverEnd = () => {
-    setHoveredNodeId(null);
+    setState(prev => ({ ...prev, hoveredNodeId: null }));
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isConnecting) {
+    if (state.isConnecting) {
       const rect = e.currentTarget.getBoundingClientRect();
-      setMousePosition({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
+      setState(prev => ({
+        ...prev,
+        mousePosition: {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        }
+      }));
     }
   };
 
-  const sourceNode = sourceNodeId ? nodes.find(n => n.id.toString() === sourceNodeId) : null;
-
-
+  const sourceNode = state.sourceNodeId ? nodes.find(n => n.id.toString() === state.sourceNodeId) : null;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      if (isConnecting) {
-        setIsConnecting(false);
-        setSourceNodeId(null);
+      if (state.isConnecting) {
+        setState(prev => ({ ...prev, isConnecting: false, sourceNodeId: null }));
       }
     }
   };
@@ -223,16 +241,16 @@ const MindMap: React.FC = () => {
       <MindMapCanvas
         svgRef={svgRef}
         links={links}
-        isConnecting={isConnecting}
+        isConnecting={state.isConnecting}
         sourceNode={sourceNode}
-        mousePosition={mousePosition}
+        mousePosition={state.mousePosition}
       />
       <MindMapNodes
         nodes={nodes}
-        draggedPositions={draggedPositions}
-        isConnecting={isConnecting}
-        sourceNodeId={sourceNodeId}
-        hoveredNodeId={hoveredNodeId}
+        draggedPositions={state.draggedPositions}
+        isConnecting={state.isConnecting}
+        sourceNodeId={state.sourceNodeId}
+        hoveredNodeId={state.hoveredNodeId}
         sourceNode={sourceNode}
         onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
         onEdit={handleEditNode}
@@ -245,21 +263,29 @@ const MindMap: React.FC = () => {
         onDrag={handleNodeDrag}
       />
       <MindMapEditors
-        isEditorOpen={isEditorOpen}
-        clickPosition={clickPosition}
+        isEditorOpen={state.isEditorOpen}
+        clickPosition={state.clickPosition}
         onEditorSave={handleEditorSave}
         onEditorCancel={handleEditorCancel}
-        isEditEditorOpen={isEditEditorOpen}
-        editNodeData={editNodeData}
+        isEditEditorOpen={state.isEditEditorOpen}
+        editNodeData={state.editNodeData}
         onEditSave={handleEditSave}
         onEditCancel={handleEditCancel}
-        isContextMenuOpen={isContextMenuOpen}
-        contextMenuPosition={contextMenuPosition}
+        isContextMenuOpen={state.isContextMenuOpen}
+        contextMenuPosition={state.contextMenuPosition}
         onContextMenuEdit={handleContextMenuEdit}
         onContextMenuDelete={handleContextMenuDelete}
         onContextMenuConnect={handleContextMenuConnect}
         onContextMenuClose={handleContextMenuClose}
       />
+      {isInitialLoading && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span className="text-gray-700">Loading...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

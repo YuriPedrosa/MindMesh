@@ -1,7 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 import MindMap from "./components/MindMap";
+import { useMindNodeStore } from "./store/mindNodeStore";
 
 const App: React.FC = () => {
+  const { connectWebSocket, disconnectWebSocket } = useMindNodeStore();
+
+  useEffect(() => {
+    connectWebSocket();
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [connectWebSocket, disconnectWebSocket]);
+
   return (
     <div className="h-screen bg-background text-foreground flex flex-col dark">
       <header className="bg-card shadow-sm border-b border-border flex-shrink-0">
@@ -17,6 +28,7 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-hidden bg-secondary">
         <MindMap />
       </main>
+      <Toaster position="top-right" />
     </div>
   );
 };

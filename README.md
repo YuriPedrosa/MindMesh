@@ -20,7 +20,6 @@ O **MindMesh** é uma aplicação fullstack inovadora que permite criar **mapas 
 - Spring WebSocket (com STOMP para comunicação bidirecional)
 - Spring Data Neo4j (persistência em grafo)
 - Lombok (boilerplate reduction)
-- MapStruct (mapeamento entre entidades e DTOs)
 
 ### **Banco de Dados**
 

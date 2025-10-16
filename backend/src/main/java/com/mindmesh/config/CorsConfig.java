@@ -10,9 +10,10 @@ public class CorsConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:5173") // Frontend Vite dev server
+                .allowedOriginPatterns("http://localhost:*") // Allow localhost with any port for development
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowedHeaders("Content-Type", "Authorization", "X-Requested-With")
+                .allowCredentials(true)
+                .maxAge(3600); // Cache preflight response for 1 hour
     }
 }
