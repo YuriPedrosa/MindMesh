@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 import MindMap from "./components/MindMap";
 import { useMindNodeStore } from "./store/mindNodeStore";
 
@@ -27,6 +28,7 @@ const App: React.FC = () => {
       <main className="flex-1 overflow-hidden bg-secondary">
         <MindMap />
       </main>
+      <Toaster position="top-right" />
     </div>
   );
 };

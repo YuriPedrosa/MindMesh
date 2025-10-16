@@ -3,6 +3,7 @@ import type { NodeType } from '../types/nodeTypes'
 import { DEFAULT_NODE_TYPE } from '../constants/nodeDefaults'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import toast from 'react-hot-toast'
 
 export interface MindNode {
   id: number
@@ -17,6 +18,7 @@ export interface MindNode {
 interface MindNodeStore {
   nodes: MindNode[]
   isLoading: boolean
+  isInitialLoading: boolean
   error: string | null
   stompClient: Client | null
   fetchNodes: () => Promise<void>
@@ -33,11 +35,12 @@ const API_BASE_URL = 'http://localhost:8080/api'
 export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
   nodes: [],
   isLoading: false,
+  isInitialLoading: false,
   error: null,
   stompClient: null,
 
   fetchNodes: async () => {
-    set({ isLoading: true, error: null })
+    set({ isInitialLoading: true, error: null })
     const maxRetries = 3
     let attempt = 0
 
@@ -46,12 +49,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
         const response = await fetch(`${API_BASE_URL}/nodes`)
         if (!response.ok) throw new Error('Failed to fetch nodes')
         const nodes = await response.json()
-        set({ nodes, isLoading: false })
+        set({ nodes, isInitialLoading: false })
         return
       } catch (error) {
         attempt++
         if (attempt >= maxRetries) {
-          set({ error: (error as Error).message, isLoading: false })
+          set({ error: (error as Error).message, isInitialLoading: false })
+          toast.error('Failed to load nodes. Please try again.')
         } else {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         }
@@ -74,11 +78,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
         if (!response.ok) throw new Error('Failed to add node')
         const newNode = await response.json()
         set((state) => ({ nodes: [...state.nodes, newNode], isLoading: false }))
+        toast.success('Node added successfully!')
         return
       } catch (error) {
         attempt++
         if (attempt >= maxRetries) {
           set({ error: (error as Error).message, isLoading: false })
+          toast.error('Failed to add node. Please try again.')
         } else {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         }
@@ -107,11 +113,18 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
           nodes: state.nodes.map((node) => (node.id === id ? updatedNode : node)),
           isLoading: false,
         }))
+        // Only show success toast if the update is not just position change
+        const isPositionChangeOnly = Object.keys(updates).length === 2 &&
+          'x' in updates && 'y' in updates
+        if (!isPositionChangeOnly) {
+          toast.success('Node updated successfully!')
+        }
         return
       } catch (error) {
         attempt++
         if (attempt >= maxRetries) {
           set({ error: (error as Error).message, isLoading: false })
+          toast.error('Failed to update node. Please try again.')
         } else {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         }
@@ -134,11 +147,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
           nodes: state.nodes.filter((node) => node.id !== id),
           isLoading: false,
         }))
+        toast.success('Node deleted successfully!')
         return
       } catch (error) {
         attempt++
         if (attempt >= maxRetries) {
           set({ error: (error as Error).message, isLoading: false })
+          toast.error('Failed to delete node. Please try again.')
         } else {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         }
@@ -170,11 +185,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
           await get().fetchNodes()
         }
         set({ isLoading: false })
+        toast.success('Nodes connected successfully!')
         return
       } catch (error) {
         attempt++
         if (attempt >= maxRetries) {
           set({ error: (error as Error).message, isLoading: false })
+          toast.error('Failed to connect nodes. Please try again.')
         } else {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
         }
