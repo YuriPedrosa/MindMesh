@@ -13,6 +13,7 @@ const MindMap: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [sourceNodeId, setSourceNodeId] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [draggedPositions, setDraggedPositions] = useState<Record<string, { x: number; y: number }>>({});
 
   useEffect(() => {
     fetchNodes();
@@ -23,7 +24,16 @@ const MindMap: React.FC = () => {
       node.connectionIds
         ?.map((targetId) => {
           const target = nodes.find((n) => n.id === targetId);
-          return target ? { source: node, target } : null;
+          if (!target) return null;
+
+          // Use dragged positions if available, otherwise use node positions
+          const sourcePos = draggedPositions[node.id.toString()] || { x: node.x, y: node.y };
+          const targetPos = draggedPositions[target.id.toString()] || { x: target.x, y: target.y };
+
+          return {
+            source: { ...node, x: sourcePos.x, y: sourcePos.y },
+            target: { ...target, x: targetPos.x, y: targetPos.y }
+          };
         })
         .filter(Boolean) || []
   );
@@ -63,6 +73,24 @@ const MindMap: React.FC = () => {
       setIsConnecting(false);
       setSourceNodeId(null);
     }
+  };
+
+  const handleNodeDrag = (id: string, x: number, y: number) => {
+    setDraggedPositions(prev => ({
+      ...prev,
+      [id]: { x, y }
+    }));
+  };
+
+  const handleNodeDragEnd = (id: string, x: number, y: number) => {
+    // Update the actual node position
+    updateNode(parseInt(id), { x, y });
+    // Clear the dragged position
+    setDraggedPositions(prev => {
+      const newPositions = { ...prev };
+      delete newPositions[id];
+      return newPositions;
+    });
   };
 
   const handleConnectEnd = (targetId: string) => {
@@ -137,23 +165,28 @@ const MindMap: React.FC = () => {
           </marker>
         </defs>
       </svg>
-      {nodes.map((node) => (
-        <MindNode
-          key={node.id}
-          id={node.id.toString()}
-          title={node.title}
-          x={node.x}
-          y={node.y}
-          color={node.color}
-          onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
-          onDelete={(id) => removeNode(parseInt(id))}
-          onConnectStart={handleConnectStart}
-          onConnectEnd={handleConnectEnd}
-          isConnecting={isConnecting}
-          isSource={sourceNodeId === node.id.toString()}
-          isTarget={false} // Could be enhanced to highlight potential targets
-        />
-      ))}
+      {nodes.map((node) => {
+        const draggedPos = draggedPositions[node.id.toString()];
+        return (
+          <MindNode
+            key={node.id}
+            id={node.id.toString()}
+            title={node.title}
+            x={draggedPos ? draggedPos.x : node.x}
+            y={draggedPos ? draggedPos.y : node.y}
+            color={node.color}
+            type={node.type}
+            onUpdate={(id, updates) => updateNode(parseInt(id), updates)}
+            onDelete={(id) => removeNode(parseInt(id))}
+            onConnectStart={handleConnectStart}
+            onConnectEnd={handleConnectEnd}
+            isConnecting={isConnecting}
+            isSource={sourceNodeId === node.id.toString()}
+            isTarget={false} // Could be enhanced to highlight potential targets
+            onDrag={handleNodeDrag}
+          />
+        );
+      })}
       {isEditorOpen && (
         <NewNodeEditor
           x={clickPosition.x}

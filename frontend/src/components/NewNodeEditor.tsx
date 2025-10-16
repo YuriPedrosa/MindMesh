@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { NodeType } from "../types/nodeTypes";
 import {
   DEFAULT_NODE_TITLE,
   DEFAULT_NODE_COLOR,
   DEFAULT_NODE_TYPE,
+  NODE_TYPE_COLORS,
 } from "../constants/nodeDefaults";
 
 interface NewNodeEditorProps {
@@ -22,6 +23,10 @@ const NewNodeEditor: React.FC<NewNodeEditorProps> = ({
   const [title, setTitle] = useState(DEFAULT_NODE_TITLE);
   const [color, setColor] = useState(DEFAULT_NODE_COLOR);
   const [type, setType] = useState<NodeType>(DEFAULT_NODE_TYPE);
+
+  useEffect(() => {
+    setColor(NODE_TYPE_COLORS[type]);
+  }, [type]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
