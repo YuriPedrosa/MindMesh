@@ -1,18 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import type { NodeType } from "../types/nodeTypes";
 import { NODE_TYPE_COLORS, NODE_TYPE_ICONS } from "../constants/nodeDefaults";
-
-// Function to determine if a color is dark or light
-const isColorDark = (color: string): boolean => {
-  // Convert hex to RGB
-  const hex = color.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance < 0.5;
-};
+import { isColorDark } from "../utils/colorUtils";
 
 interface MindNodeProps {
   id: string;
@@ -54,8 +43,7 @@ const MindNode: React.FC<MindNodeProps> = ({
   onHoverStart,
   onHoverEnd,
 }) => {
-  const defaultColor = NODE_TYPE_COLORS[type];
-  const nodeColor = color || defaultColor;
+  const nodeColor = color || NODE_TYPE_COLORS[type];
   const isDark = isColorDark(nodeColor);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
