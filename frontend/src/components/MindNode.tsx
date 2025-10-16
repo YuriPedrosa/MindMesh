@@ -85,7 +85,7 @@ const MindNode: React.FC<MindNodeProps> = ({
   return (
     <div
       ref={nodeRef}
-      className="absolute cursor-move select-none"
+      className="absolute cursor-move select-none group"
       style={{
         left: x,
         top: y,
@@ -96,7 +96,7 @@ const MindNode: React.FC<MindNodeProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       <div
-        className="px-4 py-2 rounded-lg shadow-lg border-2 border-white"
+        className="relative px-4 py-3 rounded-xl shadow-lg border border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-200 hover:shadow-xl hover:scale-105"
         style={{ backgroundColor: color }}
       >
         {isEditing ? (
@@ -106,18 +106,18 @@ const MindNode: React.FC<MindNodeProps> = ({
             onChange={(e) => setEditTitle(e.target.value)}
             onBlur={handleSave}
             onKeyPress={handleKeyPress}
-            className="bg-transparent outline-none text-white placeholder-white"
+            className="bg-transparent outline-none text-foreground placeholder-muted-foreground font-medium"
             autoFocus
           />
         ) : (
-          <span className="text-white font-medium">{title}</span>
+          <span className="text-foreground font-medium select-none">{title}</span>
         )}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onDelete(id);
           }}
-          className="ml-2 text-white hover:text-red-300"
+          className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-destructive/80 flex items-center justify-center text-sm font-bold shadow-md"
         >
           ×
         </button>

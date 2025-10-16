@@ -76,7 +76,7 @@ const MindMap: React.FC = () => {
 
   return (
     <div
-      className="relative w-full h-full bg-white overflow-hidden"
+      className="relative w-full h-full bg-transparent overflow-hidden"
       onClick={handleCanvasClick}
     >
       <svg
