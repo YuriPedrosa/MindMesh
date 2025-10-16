@@ -14,6 +14,7 @@ const MindMap: React.FC = () => {
   const [sourceNodeId, setSourceNodeId] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [draggedPositions, setDraggedPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNodes();
@@ -82,23 +83,22 @@ const MindMap: React.FC = () => {
     }));
   };
 
-  const handleNodeDragEnd = (id: string, x: number, y: number) => {
-    // Update the actual node position
-    updateNode(parseInt(id), { x, y });
-    // Clear the dragged position
-    setDraggedPositions(prev => {
-      const newPositions = { ...prev };
-      delete newPositions[id];
-      return newPositions;
-    });
-  };
-
   const handleConnectEnd = (targetId: string) => {
     if (sourceNodeId && sourceNodeId !== targetId) {
       connectNodes(parseInt(sourceNodeId), parseInt(targetId));
     }
     setIsConnecting(false);
     setSourceNodeId(null);
+  };
+
+  const handleNodeHoverStart = (id: string) => {
+    if (isConnecting && id !== sourceNodeId) {
+      setHoveredNodeId(id);
+    }
+  };
+
+  const handleNodeHoverEnd = () => {
+    setHoveredNodeId(null);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -182,8 +182,10 @@ const MindMap: React.FC = () => {
             onConnectEnd={handleConnectEnd}
             isConnecting={isConnecting}
             isSource={sourceNodeId === node.id.toString()}
-            isTarget={false} // Could be enhanced to highlight potential targets
+            isTarget={hoveredNodeId === node.id.toString()}
             onDrag={handleNodeDrag}
+            onHoverStart={handleNodeHoverStart}
+            onHoverEnd={handleNodeHoverEnd}
           />
         );
       })}

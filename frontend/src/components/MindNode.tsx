@@ -32,6 +32,8 @@ interface MindNodeProps {
   isSource: boolean;
   isTarget: boolean;
   onDrag?: (id: string, x: number, y: number) => void;
+  onHoverStart: (id: string) => void;
+  onHoverEnd: () => void;
 }
 
 const MindNode: React.FC<MindNodeProps> = ({
@@ -49,6 +51,8 @@ const MindNode: React.FC<MindNodeProps> = ({
   isSource,
   isTarget,
   onDrag,
+  onHoverStart,
+  onHoverEnd,
 }) => {
   const defaultColor = NODE_TYPE_COLORS[type];
   const nodeColor = color || defaultColor;
@@ -160,9 +164,13 @@ const MindNode: React.FC<MindNodeProps> = ({
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDoubleClick}
       onClick={handleClick}
+      onMouseEnter={() => onHoverStart(id)}
+      onMouseLeave={onHoverEnd}
     >
       <div
-        className="relative flex rounded-xl shadow-2xl border-2 border-white/20 bg-card/90 backdrop-blur-md transition-all duration-200 hover:shadow-3xl hover:scale-105"
+        className={`relative flex rounded-xl shadow-2xl border-2 border-white/20 bg-card/90 backdrop-blur-md transition-all duration-200 hover:shadow-3xl hover:scale-105 ${
+          isTarget ? "ring-4 ring-blue-500 ring-opacity-75" : ""
+        }`}
         style={{ backgroundColor: nodeColor, boxShadow: `0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)` }}
       >
         <div className="flex items-center justify-center w-12 bg-gradient-to-b from-white/40 to-white/20 border-r-2 border-white/60 rounded-l-xl shadow-inner">
