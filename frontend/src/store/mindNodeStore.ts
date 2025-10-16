@@ -64,11 +64,10 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
       const currentNode = get().nodes.find((node) => node.id === id)
       if (!currentNode) throw new Error('Node not found')
 
-      const fullUpdates = { ...currentNode, ...updates }
       const response = await fetch(`${API_BASE_URL}/nodes/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fullUpdates),
+        body: JSON.stringify(updates),
       })
       if (!response.ok) throw new Error('Failed to update node')
       const updatedNode = await response.json()
