@@ -1,3 +1,18 @@
+/**
+ * Main mind map component that orchestrates the entire mind mapping interface.
+ * Manages state for node editing, connections, context menus, and drag operations.
+ * Integrates with the global store for data persistence and real-time updates.
+ *
+ * Features:
+ * - Interactive canvas for node creation and manipulation
+ * - Real-time collaborative editing
+ * - Node connection system with visual feedback
+ * - Context menus for node operations
+ * - Drag and drop functionality
+ * - Loading states and error handling
+ *
+ * @author Yuri Pedrosa
+ */
 import React, { useRef, useEffect, useState } from "react";
 import { useMindNodeStore } from "../store/mindNodeStore";
 import MindMapCanvas from "./MindMapCanvas";

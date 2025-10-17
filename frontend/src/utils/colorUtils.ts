@@ -1,5 +1,14 @@
 /**
+ * Utility functions for color manipulation and analysis.
+ * Provides helper functions for determining color properties used in UI rendering.
+ *
+ * @author Yuri Pedrosa
+ */
+
+/**
  * Determines if a given hex color is dark or light based on its luminance.
+ * Uses the standard luminance formula to calculate perceived brightness.
+ *
  * @param color - The hex color string (e.g., "#ffffff").
  * @returns True if the color is dark, false otherwise.
  */

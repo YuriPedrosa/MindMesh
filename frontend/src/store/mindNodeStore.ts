@@ -1,3 +1,17 @@
+/**
+ * Zustand store for managing mind map nodes and real-time collaboration.
+ * This store handles all state management for the mind map application,
+ * including CRUD operations, WebSocket communication, and user feedback.
+ *
+ * Features:
+ * - State management for mind map nodes
+ * - REST API integration with retry logic
+ * - Real-time WebSocket updates using STOMP
+ * - Error handling and user notifications
+ * - Automatic reconnection for WebSocket
+ *
+ * @author Yuri Pedrosa
+ */
 import { create } from 'zustand'
 import type { NodeType } from '../types/nodeTypes'
 import { DEFAULT_NODE_TYPE } from '../constants/nodeDefaults'
@@ -5,33 +19,66 @@ import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 import toast from 'react-hot-toast'
 
+/**
+ * Interface representing a mind map node in the frontend store.
+ * Contains all the properties needed for rendering and managing nodes in the UI.
+ */
 export interface MindNode {
+  /** Unique identifier for the node */
   id: number
+  /** Display title of the node */
   title: string
+  /** X-coordinate position on the canvas */
   x: number
+  /** Y-coordinate position on the canvas */
   y: number
+  /** Optional color for visual customization */
   color?: string
+  /** Type of the node (IDEA, NOTE, TASK, etc.) */
   type: NodeType
+  /** Array of IDs of nodes this node is connected to */
   connectionIds?: number[]
 }
 
+/**
+ * Interface for the Zustand store managing mind map nodes and WebSocket connections.
+ * Provides methods for CRUD operations, real-time synchronization, and connection management.
+ */
 interface MindNodeStore {
+  /** Array of all mind map nodes currently in the store */
   nodes: MindNode[]
+  /** Flag indicating if any operation is currently loading */
   isLoading: boolean
+  /** Flag for initial data loading state */
   isInitialLoading: boolean
+  /** Error message if any operation failed */
   error: string | null
+  /** STOMP WebSocket client for real-time communication */
   stompClient: Client | null
+  /** Fetches all nodes from the backend API */
   fetchNodes: () => Promise<void>
+  /** Adds a new node to the mind map */
   addNode: (node: Omit<MindNode, 'id'>) => Promise<void>
+  /** Updates an existing node with partial data */
   updateNode: (id: number, updates: Partial<MindNode>) => Promise<void>
+  /** Removes a node from the mind map */
   removeNode: (id: number) => Promise<void>
+  /** Creates a connection between two nodes */
   connectNodes: (fromId: number, toId: number) => Promise<void>
+  /** Establishes WebSocket connection for real-time updates */
   connectWebSocket: () => void
+  /** Disconnects the WebSocket connection */
   disconnectWebSocket: () => void
 }
 
+/** Base URL for the backend API endpoints */
 const API_BASE_URL = 'http://localhost:8080/api'
 
+/**
+ * Zustand store for managing mind map nodes and real-time collaboration.
+ * Handles state management, API calls, and WebSocket communication.
+ * Implements retry logic for failed operations and provides user feedback via toasts.
+ */
 export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
   nodes: [],
   isLoading: false,
@@ -39,6 +86,10 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
   error: null,
   stompClient: null,
 
+  /**
+   * Fetches all nodes from the backend API with retry logic.
+   * Updates the store with the fetched nodes or sets an error state.
+   */
   fetchNodes: async () => {
     set({ isInitialLoading: true, error: null })
     const maxRetries = 3
@@ -63,6 +114,12 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
+  /**
+   * Adds a new node to the mind map via API call with retry logic.
+   * Updates the store with the new node and shows success feedback.
+   *
+   * @param node The node data to add (without ID)
+   */
   addNode: async (node) => {
     set({ isLoading: true, error: null })
     const maxRetries = 3
@@ -92,6 +149,13 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
+  /**
+   * Updates an existing node with partial data via API call with retry logic.
+   * Updates the store and shows success feedback (except for position-only changes).
+   *
+   * @param id The ID of the node to update
+   * @param updates Partial node data to update
+   */
   updateNode: async (id, updates) => {
     set({ isLoading: true, error: null })
     const maxRetries = 3
@@ -132,6 +196,12 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
+  /**
+   * Removes a node from the mind map via API call with retry logic.
+   * Updates the store by filtering out the deleted node and shows success feedback.
+   *
+   * @param id The ID of the node to remove
+   */
   removeNode: async (id) => {
     set({ isLoading: true, error: null })
     const maxRetries = 3
@@ -161,6 +231,14 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
+  /**
+   * Creates a connection between two nodes, preferring WebSocket for real-time updates.
+   * Falls back to REST API if WebSocket is not connected.
+   * Updates the store and shows success feedback.
+   *
+   * @param sourceId The ID of the source node
+   * @param targetId The ID of the target node
+   */
   connectNodes: async (sourceId, targetId) => {
     set({ isLoading: true, error: null })
     const maxRetries = 3
@@ -199,6 +277,10 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     }
   },
 
+  /**
+   * Establishes a WebSocket connection using STOMP protocol for real-time collaboration.
+   * Subscribes to node updates and graph changes, handling automatic reconnection.
+   */
   connectWebSocket: () => {
     const stompClient = new Client({
       webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
@@ -248,6 +330,9 @@ export const useMindNodeStore = create<MindNodeStore>((set, get) => ({
     set({ stompClient })
   },
 
+  /**
+   * Disconnects the WebSocket connection and cleans up the client reference.
+   */
   disconnectWebSocket: () => {
     const stompClient = get().stompClient
     if (stompClient) {

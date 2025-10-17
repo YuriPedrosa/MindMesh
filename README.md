@@ -175,4 +175,5 @@ Isso iniciará o Neo4j com as configurações definidas no `docker-compose.yml` 
 
 ## 👨‍💻 Autor
 
-**Yuri Cristian Pedrosa de Oliveira**
+**Yuri Pedrosa**
+[LinkedIn](www.linkedin.com/in/yuri-pedrosa/)

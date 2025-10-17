@@ -11,11 +11,25 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Global exception handler for the MindMesh application.
+ * Provides centralized error handling for REST controllers.
+ * Converts exceptions into appropriate HTTP responses with error details.
+ *
+ * @author Yuri Pedrosa
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Handles validation exceptions from request body validation.
+     * Extracts field errors and returns them in a structured format.
+     *
+     * @param ex the validation exception
+     * @return HTTP 400 with field-specific error messages
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -25,6 +39,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(errors);
     }
 
+    /**
+     * Handles illegal argument exceptions, typically from invalid input data.
+     *
+     * @param ex the illegal argument exception
+     * @return HTTP 400 with error message
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
         logger.error("Illegal argument: {}", ex.getMessage());
@@ -33,6 +53,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
+    /**
+     * Handles any unhandled exceptions as a fallback.
+     * Logs the full stack trace for debugging purposes.
+     *
+     * @param ex the general exception
+     * @return HTTP 500 with generic error message
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneralException(Exception ex) {
         logger.error("Unexpected error: {}", ex.getMessage(), ex);

@@ -6,6 +6,7 @@ import com.mindmesh.service.MindNodeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +15,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * REST controller for managing mind map nodes.
+ * Provides endpoints for CRUD operations on nodes and node connections.
+ * All operations are documented with OpenAPI annotations for API documentation.
+ *
+ * @author Yuri Pedrosa
+ */
 @RestController
 @RequestMapping("/api/nodes")
 @RequiredArgsConstructor
+@Tag(name = "Mind Node Management", description = "APIs for managing mind map nodes and their connections")
 public class MindNodeController {
 
     private final MindNodeService mindNodeService;

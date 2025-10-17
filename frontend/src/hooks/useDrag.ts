@@ -1,3 +1,10 @@
+/**
+ * Custom hook for handling drag and drop functionality on DOM elements.
+ * Provides mouse event handlers and position tracking for draggable components.
+ * Used primarily for mind map node positioning and movement.
+ *
+ * @author Yuri Pedrosa
+ */
 import { useRef, useEffect } from 'react';
 
 interface UseDragProps {
